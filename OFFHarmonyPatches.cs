@@ -112,8 +112,10 @@ namespace OFFRestored
     [HarmonyPatch(typeof(FPGAudioManager), "ChangeBGM")]
     class MusicPatch
     {
-        static bool Prefix(ScriptedAudioClip sound)
+        static bool Prefix(ScriptedAudioClip sound, ref bool savePositionOfCurrentlyPlayingTrack)
         {
+            if (OFFMainPlugin.DontSaveBGMProgress.Value)
+                savePositionOfCurrentlyPlayingTrack = false;
             ReplaceSound.Replace(sound, "Music");
 
             // Continue with the rest of the function
@@ -153,6 +155,116 @@ namespace OFFRestored
             ReplaceSound.Replace(sound, "SFX");
 
             // Continue with the rest of the function
+            return true;
+        }
+    }
+    
+    // Changes speed-change-based tracks back to behaving that way as in the original French version of OFF, and also undo some remake changes
+    [HarmonyPatch(typeof(FPGCmdPlayMusic), "Activate")]
+    class PitchShiftPatch_Events
+    {
+        static bool Prefix(FPGCmdPlayMusic __instance)
+        {
+            if (OFFMainPlugin.QueenPostFightOriginal.Value && __instance.bgmTrack == OFFMusicTracks.Stille)
+                return false;
+            if (OFFMainPlugin.RestoreEnochPrefightSlowdown.Value &&
+                __instance.bgmTrack == OFFMusicTracks.ORostoDeUmAssassinoCansado)
+            {
+                __instance.scriptedAudio.pitch = 0.7f;
+                return true;
+            }
+            if (!OFFMainPlugin.RestoreOriginalSpeedChanges.Value)
+                return true;
+            float pitch;
+            (__instance.bgmTrack, pitch) = OFFMainPlugin.ConvertSpeed(__instance.bgmTrack);
+            if (pitch != 0f)
+                __instance.scriptedAudio.pitch = pitch;
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(FPGGameState), "PlaySystemBGM")]
+    class PitchShiftPatch_System
+    {
+        static bool Prefix(FPGGameState __instance, FPGSystemBGM.SystemBGMType type, bool savePositionOfCurrentlyPlayingTrack)
+        {
+            FPGSystemBGM fPGSystemBGM = null;
+            foreach (FPGAudioOverride audioOverride in __instance.audioOverrides)
+            {
+                if (audioOverride.type == type)
+                {
+                    fPGSystemBGM = new FPGSystemBGM();
+                    fPGSystemBGM.bgmTrack = audioOverride.track;
+                }
+            }
+            if (fPGSystemBGM == null)
+            {
+                foreach (FPGSystemBGM systemBGM in FPGOverworldMode.instance.globalDatabase.systemBGMs)
+                {
+                    if (systemBGM.systemBGMType == type)
+                    {
+                        fPGSystemBGM = systemBGM;
+                    }
+                }
+            }
+            float pitch = 0f;
+            if (OFFMainPlugin.RestoreOriginalSpeedChanges.Value)
+                (fPGSystemBGM.bgmTrack, pitch) =  OFFMainPlugin.ConvertSpeed(fPGSystemBGM.bgmTrack);
+            if (pitch != 0f)
+                fPGSystemBGM.scriptedAudioClip.pitch = pitch;
+            fPGSystemBGM.scriptedAudioClip.clip = FPGOverworldMode.instance.audioManager.musicMap.GetBGM(fPGSystemBGM.bgmTrack);
+            FPGOverworldMode.instance.audioManager.ChangeBGM(fPGSystemBGM.scriptedAudioClip, loop: true, savePositionOfCurrentlyPlayingTrack);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(FPGOverworldMode), "StartMusic")]
+    class PitchShiftPatch_OverworldMode
+    {
+        static bool Prefix(FPGOverworldMode __instance, bool isBackFromBattle, OFFMapComponent ___m_mapComp)
+        {
+            float pitch = 0f;
+            OFFMusicTracks track;
+            if (!__instance.gameState.playerState.isInBoat && isBackFromBattle &&
+                ___m_mapComp.bgmTrackBackFromBattle != (OFFMusicTracks)(-1))
+            {
+                if (OFFMainPlugin.RestoreOriginalSpeedChanges.Value)
+                    (track, pitch) = OFFMainPlugin.ConvertSpeed(___m_mapComp.bgmTrackBackFromBattle);
+                else
+                    track = ___m_mapComp.bgmTrackBackFromBattle;
+                ___m_mapComp.backgroundMusic.clip = __instance.audioManager.musicMap.GetBGM(track);
+                if (pitch != 0f)
+                    ___m_mapComp.backgroundMusic.pitch = pitch;
+                __instance.audioManager.ChangeBGM(___m_mapComp.backgroundMusic, loop: true);
+            }
+            else if (!__instance.gameState.playerState.isInBoat)
+            {
+                if (OFFMainPlugin.RestoreOriginalSpeedChanges.Value)
+                    (track, pitch) = OFFMainPlugin.ConvertSpeed(___m_mapComp.bgmTrack);
+                else
+                    track = ___m_mapComp.bgmTrack;
+                ___m_mapComp.backgroundMusic.clip = __instance.audioManager.musicMap.GetBGM(track);
+                if (pitch != 0f)
+                    ___m_mapComp.backgroundMusic.pitch = pitch;
+                __instance.audioManager.ChangeBGM(___m_mapComp.backgroundMusic, loop: true);
+            }
+            else
+            {
+                __instance.gameState.PlaySystemBGM(FPGSystemBGM.SystemBGMType.Boat);
+            }
+
+            return false;
+        }
+    }
+    
+    // boss death animations don't cut out the music
+    [HarmonyPatch(typeof(BATBattleAnimator), "FadeOutMusic")]
+    class BossDeathNoPause
+    {
+        static bool Prefix(BATBattleAnimator __instance)
+        {
+            if (OFFMainPlugin.BossDeathDontStopBGM.Value)
+                return false;
             return true;
         }
     }

@@ -1,6 +1,8 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
+using System.Collections.Generic;
 using BepInEx.Logging;
+using FangamerRPG;
 using HarmonyLib;
 
 namespace OFFRestored;
@@ -21,6 +23,11 @@ public class OFFMainPlugin : BaseUnityPlugin
     public static ConfigEntry<bool> ReplaceMusic;
     public static ConfigEntry<bool> DedanLoopFix;
     public static ConfigEntry<bool> DisableCreditsLoop;
+    public static ConfigEntry<bool> RestoreEnochPrefightSlowdown;
+    public static ConfigEntry<bool> RestoreOriginalSpeedChanges;
+    public static ConfigEntry<bool> QueenPostFightOriginal;
+    public static ConfigEntry<bool> BossDeathDontStopBGM;
+    public static ConfigEntry<bool> DontSaveBGMProgress;
 
     // SFX config
     public static ConfigEntry<bool> ReplaceSFX;
@@ -97,6 +104,41 @@ public class OFFMainPlugin : BaseUnityPlugin
             true,
             "If true, The credits music will not loop."
         );
+        // Queen post-fight restoration
+        QueenPostFightOriginal = Config.Bind(
+            "Music",
+            "QueenPostFightOriginal",
+            true,
+            "If true, The Woman of Your Dreams (or its counterpart) will be restored in the cutscene after Queen is defeated, instead of playing 50% speed Silence (or its counterpart)."
+        );
+        // all Burned Bodies variants restored
+        RestoreEnochPrefightSlowdown = Config.Bind(
+            "Music",
+            "RestoreEnochPrefightSlowdown",
+            true,
+            "If true, Enoch's battle theme will be slowed down in the prefight cutscene, like in the original game."
+        );
+        // bosses don't stop music during their death animations
+        BossDeathDontStopBGM = Config.Bind(
+            "Music",
+            "BossDeathDontStopBGM",
+            false,
+            "If true, battle music will not pause during boss defeat animations. This also means Tender Sugar won't restart after winning."
+        );
+        // pitch-shifted music behaves like in French version
+        RestoreOriginalSpeedChanges = Config.Bind(
+            "Music",
+            "RestoreOriginalSpeedChanges",
+            true,
+            "If true, tracks that were originally just sped-up or slowed-down of other tracks in the original French version will be restored to that form, making them transition as they did originally before the English fan translation."
+        );
+        // bgm progress doesn't save
+        DontSaveBGMProgress = Config.Bind(
+            "Music",
+            "DontSaveBGMProgress",
+            false,
+            "If true, disables the remake's new feature where overworld music continues from where it left off after battles instead of starting over from the beginning of the track (this doesn't change the behavior when battle music and overworld music are the same)"
+        );
 
         // Replace SFX
         ReplaceSFX = Config.Bind(
@@ -113,4 +155,25 @@ public class OFFMainPlugin : BaseUnityPlugin
             "If true, removes the sound that plays at the start of an ally's turn in battle."
         );
     }
+
+    public static (OFFMusicTracks, float) ConvertSpeed(OFFMusicTracks track) => track switch
+    {
+        OFFMusicTracks.BrainPlagueSlowRewind => (OFFMusicTracks.BrainPlagueRewind, 0.6f),
+        OFFMusicTracks.TheRaceOfAThousandAntsOhno => (OFFMusicTracks.TheRaceOfAThousandAnts, 0.8f),
+        OFFMusicTracks.TheRaceofAThousandAntsSafe => (OFFMusicTracks.TheRaceOfAThousandAnts, 0.5f),
+        OFFMusicTracks.Stille => (OFFMusicTracks.Silence, 0.5f),
+        OFFMusicTracks.Shhhhhh => (OFFMusicTracks.Silencio, 1.5f),
+        OFFMusicTracks.TheWallsAreListeningCliff => (OFFMusicTracks.TheWallsAreListeningCliff, 0.6f),
+        OFFMusicTracks.ClockworkLostGripOfTime => (OFFMusicTracks.Clockwork, 0.6f),
+        OFFMusicTracks.EndlessHallwayStuck => (OFFMusicTracks.EndlessHallway, 0.5f),
+        OFFMusicTracks.FourteenFakeResidents => (OFFMusicTracks.FourteenResidents, 0.8f),
+        OFFMusicTracks.FourteenResidentsOFFTitle => (OFFMusicTracks.FourteenResidents, 0.5f),
+        OFFMusicTracks.BurnedBodiesOut => (OFFMusicTracks.BurnedBodies, 0.8f),
+        OFFMusicTracks.BurnedBodiesThe => (OFFMusicTracks.BurnedBodies, 0.7f),
+        OFFMusicTracks.BurnedBodiesChimney => (OFFMusicTracks.BurnedBodies, 0.6f),
+        OFFMusicTracks.BurnedBodiesSweetTooth => (OFFMusicTracks.BurnedBodies, 0.5f),
+        OFFMusicTracks.YesterdayWasEvenBetter => (OFFMusicTracks.YesterdayWasBetter, 0.8f),
+        OFFMusicTracks.TodayIsWorstSweet => (OFFMusicTracks.TodayIsWorst, 0.8f),
+        _ => (track, 0f)
+    };
 }
