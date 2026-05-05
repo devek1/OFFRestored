@@ -163,7 +163,7 @@ public class OFFMainPlugin : BaseUnityPlugin
         OFFMusicTracks.TheRaceofAThousandAntsSafe => (OFFMusicTracks.TheRaceOfAThousandAnts, 0.5f),
         OFFMusicTracks.Stille => (OFFMusicTracks.Silence, 0.5f),
         OFFMusicTracks.Shhhhhh => (OFFMusicTracks.Silencio, 1.5f),
-        OFFMusicTracks.TheWallsAreListeningCliff => (OFFMusicTracks.TheWallsAreListeningCliff, 0.6f),
+        OFFMusicTracks.TheWallsAreListeningCliff => (OFFMusicTracks.TheWallsAreListening, 0.6f),
         OFFMusicTracks.ClockworkLostGripOfTime => (OFFMusicTracks.Clockwork, 0.6f),
         OFFMusicTracks.EndlessHallwayStuck => (OFFMusicTracks.EndlessHallway, 0.5f),
         OFFMusicTracks.FourteenFakeResidents => (OFFMusicTracks.FourteenResidents, 0.8f),
