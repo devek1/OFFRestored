@@ -111,7 +111,7 @@ public class OFFMainPlugin : BaseUnityPlugin
             true,
             "If true, The Woman of Your Dreams (or its counterpart) will be restored in the cutscene after Queen is defeated, instead of playing 50% speed Silence (or its counterpart)."
         );
-        // all Burned Bodies variants restored
+        // Enoch pre-fight music slowed down
         RestoreEnochPrefightSlowdown = Config.Bind(
             "Music",
             "RestoreEnochPrefightSlowdown",
